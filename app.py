@@ -5,6 +5,7 @@ import logging
 import sys
 import platform
 import ssl
+import requests
 
 # 配置日志
 logging.basicConfig(level=logging.DEBUG)
@@ -13,6 +14,32 @@ logger.setLevel(logging.DEBUG)
 
 # 强制跳过 SSL 验证
 oracledb.defaults.ssl_verify_hostname = False
+
+def get_public_ip():
+    """获取公网IP地址"""
+    try:
+        # 使用多个IP查询服务以提高可靠性
+        ip_services = [
+            'https://api.ipify.org',
+            'https://api.my-ip.io/ip',
+            'https://ip.seeip.org'
+        ]
+        
+        for service in ip_services:
+            try:
+                response = requests.get(service, timeout=5)
+                if response.status_code == 200:
+                    ip = response.text.strip()
+                    st.success(f"当前IP地址: {ip}")
+                    return ip
+            except:
+                continue
+                
+        st.error("无法获取IP地址")
+        return None
+    except Exception as e:
+        st.error(f"获取IP地址失败: {str(e)}")
+        return None
 
 def test_connection():
     try:
@@ -94,8 +121,24 @@ def test_connection():
 def main():
     st.title("Oracle ADB 连接测试")
     
-    if st.button("测试数据库连接"):
-        test_connection()
+    # 添加IP检测按钮
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        if st.button("检查当前IP", type="primary"):
+            get_public_ip()
+            
+    with col2:
+        if st.button("测试数据库连接"):
+            test_connection()
+    
+    # 添加说明信息
+    st.info("""
+    注意事项：
+    1. 获取到IP地址后，需要将其添加到Oracle Cloud的ACL列表中
+    2. 在Oracle Cloud Console中：Database -> [你的数据库] -> Network -> Access Control List
+    3. 添加IP地址后等待几分钟生效
+    """)
 
 if __name__ == "__main__":
     main() 

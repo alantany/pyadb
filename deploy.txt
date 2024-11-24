@@ -1,0 +1,106 @@
+# Oracle ADB 连接测试应用部署指南
+
+## 1. 环境准备
+- Python 3.11+
+- Git
+- Streamlit Cloud 账号
+- Oracle Cloud 账号和 Autonomous Database 实例
+
+## 2. Oracle Cloud 配置
+1. 登录 Oracle Cloud Console
+2. 进入 Autonomous Database 实例设置
+3. 关闭 mTLS 认证：
+   - Network -> Mutual TLS (mTLS) authentication -> 设置为 "Not required"
+4. 配置 ACL：
+   - Network -> Access Control List
+   - 添加本地开发机器的 IP
+   - 添加 Streamlit Cloud 的出口 IP
+
+## 3. 项目文件结构
+project_root/
+├── app.py                    # 主应用程序
+├── requirements.txt          # 依赖包配置
+└── .streamlit/
+    └── secrets.toml         # 配置文件
+
+## 4. 本地开发配置
+1. 安装依赖：
+   pip install -r requirements.txt
+
+2. 配置 .streamlit/secrets.toml：
+   [oracle]
+   username = "admin"
+   password = "your_password"
+
+## 5. Streamlit Cloud 部署步骤
+1. 创建 GitHub 仓库
+2. 上传项目文件：
+   git init
+   git add .
+   git commit -m "Initial commit"
+   git remote add origin <your-repo-url>
+   git push -u origin main
+
+3. Streamlit Cloud 配置：
+   - 访问 https://streamlit.io/cloud
+   - 点击 "New app"
+   - 选择你的 GitHub 仓库
+   - 选择 main 分支
+   - 设置 app.py 为主文件
+
+4. 配置 Secrets：
+   - 在 Streamlit Cloud 的 App Settings 中
+   - 添加以下内容到 Secrets：
+     [oracle]
+     username = "admin"
+     password = "your_password"
+
+## 6. 连接字符串说明
+当前使用的连接字符串：
+(description= (retry_count=20)(retry_delay=3)
+(address=(protocol=tcps)(port=1522)(host=adb.ap-seoul-1.oraclecloud.com))
+(connect_data=(service_name=ji62b58rdfvmxnj_gp5ldkkvtlevpvtt_low.adb.oraclecloud.com))
+(security=(ssl_server_dn_match=no)))
+
+## 7. 安全配置
+- SSL 验证已禁用（仅用于测试）
+- 使用 SSL 上下文配置
+- 密码等敏感信息通过 Streamlit Secrets 管理
+
+## 8. 故障排查
+1. 连接被拒绝：
+   - 检查 ACL 配置
+   - 验证 IP 地址是否已添加
+   - 确认数据库实例状态
+
+2. SSL 证书错误：
+   - 确认 SSL 配置正确
+   - 检查连接字符串中的 SSL 设置
+
+3. 权限问题：
+   - 验证用户名和密码
+   - 检查用户权限
+
+## 9. 维护说明
+1. 定期更新依赖包：
+   pip install --upgrade oracledb streamlit
+
+2. 监控事项：
+   - 检查数据库连接状态
+   - 监控响应时间
+   - 查看错误日志
+
+3. IP 变更处理：
+   - 及时更新 Oracle Cloud ACL 配置
+   - 确保所有必要的 IP 都在白名单中
+
+## 10. 注意事项
+1. 不要在代码中硬编码敏感信息
+2. 定期更新依赖包版本
+3. 保持 ACL 配置的及时更新
+4. 在生产环境中考虑启用完整的安全措施
+
+## 11. 联系方式与支持
+- 技术支持：<your-email>
+- 项目文档：<your-docs-url>
+- 问题反馈：<your-issue-tracker> 

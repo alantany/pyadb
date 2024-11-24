@@ -90,7 +90,7 @@ project_root/
    - 监控响应时间
    - 查看错误日志
 
-3. IP 变更处理：
+3. IP 变��处理：
    - 及时更新 Oracle Cloud ACL 配置
    - 确保所有必要的 IP 都在白名单中
 

@@ -1,109 +1,7 @@
 import streamlit as st
-import oracledb
-import time
-import logging
-import sys
-import platform
-import ssl
 import requests
-from typing import Optional, Dict, List, Any, Tuple
-
-class OracleADB:
-    def __init__(self, username: str, password: str, connect_string: str):
-        """初始化Oracle ADB连接类"""
-        self.username = username
-        self.password = password
-        self.connect_string = connect_string
-        self.logger = self._setup_logger()
-        
-        # 配置SSL
-        self.ssl_context = self._setup_ssl()
-        oracledb.defaults.ssl_verify_hostname = False
-        
-    def _setup_logger(self) -> logging.Logger:
-        """设置日志"""
-        logging.basicConfig(level=logging.DEBUG)
-        logger = logging.getLogger('oracledb')
-        logger.setLevel(logging.DEBUG)
-        return logger
-        
-    def _setup_ssl(self) -> ssl.SSLContext:
-        """配置SSL上下文"""
-        ssl_context = ssl.create_default_context()
-        ssl_context.check_hostname = False
-        ssl_context.verify_mode = ssl.CERT_NONE
-        return ssl_context
-        
-    def get_connection_params(self) -> Dict[str, Any]:
-        """获取数据库连接参数"""
-        return {
-            "user": self.username,
-            "password": self.password,
-            "dsn": self.connect_string,
-            "ssl_context": self.ssl_context
-        }
-        
-    def test_connection(self) -> Tuple[bool, str, Optional[Dict[str, Any]]]:
-        """测试数据库连接"""
-        try:
-            start_time = time.time()
-            with oracledb.connect(**self.get_connection_params()) as connection:
-                with connection.cursor() as cursor:
-                    cursor.execute("SELECT SYSDATE, VERSION FROM V$INSTANCE")
-                    date_result, version = cursor.fetchone()
-                    
-                    cursor.execute("SELECT BANNER FROM V$VERSION WHERE ROWNUM = 1")
-                    banner = cursor.fetchone()[0]
-                    
-            response_time = round((time.time() - start_time) * 1000, 2)
-            
-            return True, "连接成功", {
-                "response_time": response_time,
-                "date": date_result.strftime("%Y-%m-%d %H:%M:%S"),
-                "version": version,
-                "banner": banner
-            }
-            
-        except Exception as e:
-            self.logger.error(f"连接失败: {str(e)}", exc_info=True)
-            return False, str(e), None
-            
-    def execute_sql(self, sql_query: str) -> Tuple[bool, str, Optional[Dict[str, Any]]]:
-        """执行SQL语句"""
-        try:
-            start_time = time.time()
-            with oracledb.connect(**self.get_connection_params()) as connection:
-                with connection.cursor() as cursor:
-                    cursor.execute(sql_query)
-                    
-                    # 获取列名和结果
-                    columns = [col[0] for col in cursor.description] if cursor.description else []
-                    results = cursor.fetchall() if cursor.description else []
-                    
-                    execution_time = round((time.time() - start_time) * 1000, 2)
-                    
-                    return True, "执行成功", {
-                        "columns": columns,
-                        "results": results,
-                        "execution_time": execution_time,
-                        "affected_rows": cursor.rowcount if not cursor.description else None
-                    }
-                    
-        except Exception as e:
-            self.logger.error(f"SQL执行失败: {str(e)}", exc_info=True)
-            return False, str(e), None
-            
-    def get_version(self) -> str:
-        """获取数据库版本信息"""
-        try:
-            with oracledb.connect(**self.get_connection_params()) as connection:
-                with connection.cursor() as cursor:
-                    cursor.execute("SELECT banner_full FROM v$version WHERE rownum = 1")
-                    version = cursor.fetchone()
-                    return version[0] if version else "版本信息获取失败"
-        except Exception as e:
-            self.logger.error(f"获取版本失败: {str(e)}", exc_info=True)
-            return "版本信息获取失败"
+from typing import Optional
+from oracle_adb import OracleADB
 
 def get_public_ip() -> Optional[str]:
     """获取公网IPv4地址"""
@@ -128,16 +26,16 @@ def get_public_ip() -> Optional[str]:
     except Exception:
         return None
 
-# 示例使用
 def main():
     st.title("Oracle ADB 连接测试")
     
-    # 初始化Oracle ADB连接
-    connect_string = """(description= (retry_count=20)(retry_delay=3)
-        (address=(protocol=tcps)(port=1522)(host=adb.ap-seoul-1.oraclecloud.com))
-        (connect_data=(service_name=ji62b58rdfvmxnj_gp5ldkkvtlevpvtt_low.adb.oraclecloud.com))
+    # 构建连接字符串
+    connect_string = f"""(description=(retry_count=20)(retry_delay=3)
+        (address=(protocol=tcps)(port={st.secrets["oracle"]["port"]})(host={st.secrets["oracle"]["host"]}))
+        (connect_data=(service_name={st.secrets["oracle"]["service_name"]}))
         (security=(ssl_server_dn_match=no)))"""
         
+    # 初始化Oracle ADB连接
     oracle_adb = OracleADB(
         username=st.secrets["oracle"]["username"],
         password=st.secrets["oracle"]["password"],
@@ -196,7 +94,7 @@ def main():
                     st.dataframe(result_data)
                     st.info(f"共 {len(data['results'])} 条记录")
                 elif data['affected_rows'] is not None:
-                    st.success(f"成功执行，影响 {data['affected_rows']} ���")
+                    st.success(f"成功执行，影响 {data['affected_rows']} 行")
                 else:
                     st.info("查询执行成功，无返回数据")
             else:

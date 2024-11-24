@@ -1,7 +1,6 @@
 import streamlit as st
 import oracledb
 import time
-import os
 import logging
 import sys
 import platform
@@ -15,26 +14,27 @@ logger.setLevel(logging.DEBUG)
 # 强制跳过 SSL 验证
 oracledb.defaults.ssl_verify_hostname = False
 
-# 创建一个不验证证书的SSL上下文
-ssl_context = ssl.create_default_context()
-ssl_context.check_hostname = False
-ssl_context.verify_mode = ssl.CERT_NONE
-
 def test_connection():
     try:
         start_time = time.time()
         
-        # 使用相对路径
-        wallet_path = "Wallet_GP5LDKKVTLEVPVTT"
+        # 创建不验证证书的SSL上下文
+        ssl_context = ssl.create_default_context()
+        ssl_context.check_hostname = False
+        ssl_context.verify_mode = ssl.CERT_NONE
         
-        st.info(f"Wallet完整路径: {wallet_path}")
+        # 使用完整的连接字符串
+        connect_string = """(description= (retry_count=20)(retry_delay=3)
+            (address=(protocol=tcps)(port=1522)(host=adb.ap-seoul-1.oraclecloud.com))
+            (connect_data=(service_name=ji62b58rdfvmxnj_gp5ldkkvtlevpvtt_low.adb.oraclecloud.com))
+            (security=(ssl_server_dn_match=no)))"""
             
-        # 配置连接参数
+        # 配置连接参数 - 添加SSL上下文
         params = {
             "user": st.secrets["oracle"]["username"],
             "password": st.secrets["oracle"]["password"],
-            "dsn": st.secrets["oracle"]["dsn"],
-            "config_dir": wallet_path
+            "dsn": connect_string,
+            "ssl_context": ssl_context
         }
         
         # 显示连接参数（隐藏敏感信息）
@@ -42,26 +42,15 @@ def test_connection():
         st.json({
             "user": params["user"],
             "dsn": params["dsn"],
-            "config_dir": params["config_dir"]
+            "ssl_verify": False
         })
-        
-        # 检查wallet文件
-        st.info("Wallet文件检查:")
-        if os.path.exists(wallet_path):
-            wallet_files = os.listdir(wallet_path)
-            for file in wallet_files:
-                file_path = os.path.join(wallet_path, file)
-                st.text(f"{file}: {os.path.getsize(file_path)} bytes")
-        else:
-            st.error(f"Wallet目录不存在: {wallet_path}")
-            return
         
         # 尝试连接
         st.info("正在尝试连接...")
         logger.info("开始建立数据库连接...")
         
         # 使用with语句自动管理连接
-        with oracledb.connect(**params, ssl_context=ssl_context) as connection:
+        with oracledb.connect(**params) as connection:
             logger.info("数据库连接已建立")
             
             with connection.cursor() as cursor:
@@ -99,9 +88,7 @@ def test_connection():
             "Python版本": sys.version,
             "oracledb版本": oracledb.__version__,
             "操作系统": platform.system(),
-            "Wallet路径": wallet_path,
-            "Wallet文件": os.listdir(wallet_path) if os.path.exists(wallet_path) else "路径不存在",
-            "当前目录": os.getcwd()
+            "SSL验证": "已禁用"
         })
 
 def main():

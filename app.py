@@ -18,11 +18,11 @@ oracledb.defaults.ssl_verify_hostname = False
 def get_public_ip():
     """获取公网IP地址"""
     try:
-        # 使用多个IP查询服务以提高可靠性
+        # 使用专门返回IPv4的服务
         ip_services = [
-            'https://api.ipify.org',
-            'https://api.my-ip.io/ip',
-            'https://ip.seeip.org'
+            'https://api4.ipify.org',  # 专门返回IPv4
+            'https://ipv4.seeip.org',  # 专门返回IPv4
+            'https://v4.ident.me'      # 专门返回IPv4
         ]
         
         for service in ip_services:
@@ -30,12 +30,13 @@ def get_public_ip():
                 response = requests.get(service, timeout=5)
                 if response.status_code == 200:
                     ip = response.text.strip()
-                    st.success(f"当前IP地址: {ip}")
-                    return ip
+                    if ':' not in ip:  # 确保不是IPv6地址
+                        st.success(f"当前IPv4地址: {ip}")
+                        return ip
             except:
                 continue
                 
-        st.error("无法获取IP地址")
+        st.error("无法获取IPv4地址")
         return None
     except Exception as e:
         st.error(f"获取IP地址失败: {str(e)}")

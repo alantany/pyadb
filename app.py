@@ -29,17 +29,14 @@ def get_public_ip() -> Optional[str]:
 def main():
     st.title("Oracle ADB 连接测试")
     
-    # 构建连接字符串
-    connect_string = f"""(description=(retry_count=20)(retry_delay=3)
-        (address=(protocol=tcps)(port={st.secrets["oracle"]["port"]})(host={st.secrets["oracle"]["host"]}))
-        (connect_data=(service_name={st.secrets["oracle"]["service_name"]}))
-        (security=(ssl_server_dn_match=no)))"""
-        
     # 初始化Oracle ADB连接
     oracle_adb = OracleADB(
         username=st.secrets["oracle"]["username"],
         password=st.secrets["oracle"]["password"],
-        connect_string=connect_string
+        connect_string=st.secrets["oracle"].get("connect_string", """(description=(retry_count=20)(retry_delay=3)
+            (address=(protocol=tcps)(port=1522)(host=adb.ap-seoul-1.oraclecloud.com))
+            (connect_data=(service_name=ji62b58rdfvmxnj_gp5ldkkvtlevpvtt_low.adb.oraclecloud.com))
+            (security=(ssl_server_dn_match=no)))""")
     )
     
     # 显示系统信息
@@ -53,6 +50,11 @@ def main():
             
         st.write("### 数据库版本")
         st.success(oracle_adb.get_version())
+        
+        # 添加开发者信息
+        st.markdown("---")
+        st.markdown("### 开发者")
+        st.markdown("**Huaiyuan Tan**")
     
     # 添加选项卡
     tab1, tab2 = st.tabs(["连接测试", "SQL执行"])

@@ -170,8 +170,9 @@ class OracleADB:
             
 问题: {query}
 
-请只返回表名列表，每行一个表名，不要包含其他任何信息。
+如果查询涉及元数据（如查询表信息、数据库信息等），请返回"METADATA"。
 如果无法确定涉及的表，请返回"未知"。
+否则，请返回具体的表名列表，每行一个表名。
 """
             
             # 调用OpenAI API
@@ -186,15 +187,14 @@ class OracleADB:
             )
             
             # 解析返回的表名
-            tables = []
             result = response.choices[0].message.content.strip()
-            if result.lower() != "未知":
+            if result.upper() == "METADATA":
+                return True, "查询数据库元数据", ["USER_TABLES"]
+            elif result.lower() != "未知":
                 tables = [table.strip().upper() for table in result.split('\n') if table.strip()]
+                return True, f"识别到相关表: {', '.join(tables)}", tables
             
-            if not tables:
-                return False, "无法确定查询涉及的表", None
-                
-            return True, f"识别到相关表: {', '.join(tables)}", tables
+            return False, "无法确定查询涉及的表", None
             
         except Exception as e:
             self.logger.error(f"分析查询失败: {str(e)}", exc_info=True)
@@ -298,6 +298,12 @@ class OracleADB:
 3. 如果无法生成有效的SQL,返回"无法生成有效的SQL查询"
 4. 不要生成任何DDL(CREATE/ALTER/DROP)语句
 5. 只生成查询相关的SQL(SELECT)语句
+6. 如果是查询表信息，使用USER_TABLES等数据字典视图
+7. 返回的SQL必须以SELECT开头
+
+示例:
+- 查询当前用户有多少张表 -> SELECT COUNT(*) FROM USER_TABLES
+- 显示所有表名 -> SELECT TABLE_NAME FROM USER_TABLES ORDER BY TABLE_NAME
 """
         
         try:

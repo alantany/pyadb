@@ -33,10 +33,10 @@ def main():
     oracle_adb = OracleADB(
         username=st.secrets["oracle"]["username"],
         password=st.secrets["oracle"]["password"],
-        connect_string=st.secrets["oracle"].get("connect_string", """(description=(retry_count=20)(retry_delay=3)
+        connect_string="""(description=(retry_count=20)(retry_delay=3)
             (address=(protocol=tcps)(port=1522)(host=adb.ap-seoul-1.oraclecloud.com))
             (connect_data=(service_name=ji62b58rdfvmxnj_gp5ldkkvtlevpvtt_low.adb.oraclecloud.com))
-            (security=(ssl_server_dn_match=no)))""")
+            (security=(ssl_server_dn_match=no)))"""
     )
     
     # 显示系统信息

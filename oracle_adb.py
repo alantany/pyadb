@@ -300,6 +300,7 @@ class OracleADB:
 5. 只生成查询相关的SQL(SELECT)语句
 6. 如果是查询表信息，使用USER_TABLES等数据字典视图
 7. 返回的SQL必须以SELECT开头
+8. 不要在SQL语句末尾加分号，系统会自动添加
 
 示例:
 - 查询当前用户有多少张表 -> SELECT COUNT(*) FROM USER_TABLES
@@ -311,7 +312,7 @@ class OracleADB:
             response = self.openai_client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
-                    {"role": "system", "content": "你是一个Oracle SQL专家,专门负责将自然语言转换为SQL查询语句。"},
+                    {"role": "system", "content": "你是一个Oracle SQL专家,专门负责将自然语言转换为SQL查询语句。记住不要在SQL末尾加分号。"},
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.1,
@@ -323,6 +324,10 @@ class OracleADB:
             
             # 5. 获取并验证SQL
             sql = response.choices[0].message.content.strip()
+            
+            # 移除末尾的分号
+            if sql.endswith(';'):
+                sql = sql[:-1].strip()
             
             if sql.lower().startswith(("select", "with")):
                 return True, "成功生成SQL查询", sql

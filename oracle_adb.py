@@ -47,11 +47,9 @@ class OracleADB:
         self.connect_string = connect_string
         self.logger = self._setup_logger()
         
-        # 配置Oracle客户端
-        oracledb.init_oracle_client()
-        
         # 配置SSL
-        self._setup_ssl()
+        self.ssl_context = self._setup_ssl()
+        oracledb.defaults.ssl_verify_hostname = False
         
         # 初始化OpenAI客户端
         self.openai_client = OpenAI(
@@ -66,16 +64,20 @@ class OracleADB:
         logger.setLevel(logging.DEBUG)
         return logger
         
-    def _setup_ssl(self) -> None:
-        """配置SSL设置"""
-        oracledb.defaults.ssl_verify_hostname = False
+    def _setup_ssl(self) -> ssl.SSLContext:
+        """配置SSL上下文"""
+        ssl_context = ssl.create_default_context()
+        ssl_context.check_hostname = False
+        ssl_context.verify_mode = ssl.CERT_NONE
+        return ssl_context
         
     def get_connection_params(self) -> Dict[str, Any]:
         """获取数据库连接参数"""
         return {
             "user": self.username,
             "password": self.password,
-            "dsn": self.connect_string
+            "dsn": self.connect_string,
+            "ssl_context": self.ssl_context
         }
         
     def test_connection(self) -> Tuple[bool, str, Optional[Dict[str, Any]]]:

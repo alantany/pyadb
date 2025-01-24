@@ -57,7 +57,7 @@ def main():
         st.markdown("**Huaiyuan Tan**")
     
     # 添加选项卡
-    tab1, tab2 = st.tabs(["连接测试", "SQL执行"])
+    tab1, tab2, tab3 = st.tabs(["连接测试", "SQL执行", "自然语言查询"])
     
     # 连接测试选项卡
     with tab1:
@@ -101,6 +101,50 @@ def main():
                     st.info("查询执行成功，无返回数据")
             else:
                 st.error(f"SQL执行失败: {message}")
+    
+    # 自然语言查询选项卡
+    with tab3:
+        st.markdown("""
+        ### 支持的自然语言查询示例：
+        - 显示所有表
+        - 显示表结构 xxx
+        - 显示表 xxx
+        - 显示表 xxx 的前 10 条数据
+        - 统计表 xxx 的记录数
+        """)
+        
+        nl_query = st.text_area(
+            "输入自然语言查询",
+            height=100,
+            placeholder="例如：显示所有表"
+        )
+        
+        if st.button("执行查询", type="primary") and nl_query:
+            # 转换自然语言到SQL
+            success, message, sql = oracle_adb.natural_language_to_sql(nl_query)
+            
+            if success and sql:
+                st.info(f"理解为: {message}")
+                st.code(sql, language="sql")
+                
+                # 执行SQL查询
+                success, message, data = oracle_adb.execute_sql(sql)
+                if success and data:
+                    st.success(f"查询执行成功! 耗时: {data['execution_time']}ms")
+                    
+                    if data['columns'] and data['results']:
+                        st.write("查询结果:")
+                        result_data = [dict(zip(data['columns'], row)) for row in data['results']]
+                        st.dataframe(result_data)
+                        st.info(f"共 {len(data['results'])} 条记录")
+                    elif data['affected_rows'] is not None:
+                        st.success(f"成功执行，影响 {data['affected_rows']} 行")
+                    else:
+                        st.info("查询执行成功，无返回数据")
+                else:
+                    st.error(f"SQL执行失败: {message}")
+            else:
+                st.error(message)
 
 if __name__ == "__main__":
     main() 
